@@ -17,6 +17,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
       - name: Find ZIP file
         shell: bash
         run: |
@@ -37,24 +42,19 @@ jobs:
           mkdir project
           unzip -q "$ZIP_FILE" -d project
 
-          echo "محتويات المشروع:"
-          find project -maxdepth 4 -type f | head -100
-
       - name: Find Android project
         shell: bash
         run: |
-          GRADLEW=$(find project -type f -name "gradlew" | head -n 1)
+          SETTINGS=$(find project -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -n 1)
 
-          if [ -z "$GRADLEW" ]; then
-            echo "لم يتم العثور على gradlew داخل المشروع"
-            echo "الملفات الموجودة:"
-            find project -maxdepth 5 -type f
+          if [ -z "$SETTINGS" ]; then
+            echo "لم يتم العثور على settings.gradle داخل المشروع"
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$GRADLEW")
+          PROJECT_DIR=$(dirname "$SETTINGS")
 
-          echo "تم العثور على المشروع:"
+          echo "Android project:"
           echo "$PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
@@ -63,8 +63,7 @@ jobs:
         shell: bash
         run: |
           cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
